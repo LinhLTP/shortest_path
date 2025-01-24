@@ -4,12 +4,10 @@ pacman::p_load(
   tibble, ggplot2, units, tmap, osmdata, leaflet, readxl, rio, here
 )
 
-
 # Load and preprocess London data
 london <- read_excel("data/msoa-data.xls")
 england <- read.csv("data/MSOA_Dec_2011_PWC_in_England_and_Wales_2022_-7657754233007660732.csv")
 england.2 <- read_excel("data/MLSOA_Dec_2021_PWC_in_England_and_Wales_2022_-3559472851201324412.xlsx")
-
 
 # Harmonise column names
 colnames(england)[2] <- "MSOA Code"
@@ -78,3 +76,29 @@ head (path1)
 dt <- st_as_sf(path1, coords = c("x", "y"), crs = 4326)
 dt <- dt[1:100, ]
 leaflet() %>% addTiles() %>% addMarkers(data = dt)
+
+# Copenhagen: Bounding box and random points
+bb <- osmdata::getbb("Copenhagen")
+npts <- 10
+xy <- apply(bb, 1, function(i) min(i) + runif(npts)*diff(i))
+
+head(xy, 10)
+
+# Subset network for visualisation
+net <- dodgr_streetnet(bb) # download street network 
+trans_net <- weight_streetnet(net, wt_profile = "foot")
+head(trans_net, 3)
+d <- dodgr_dists(trans_net, from = xy, to = xy)
+
+# Creat a small net 
+bbox <- matrix(c(12.5926,55.6612,12.6325,55.6728),ncol=2)
+colnames(bbox) <- c("min","max")
+rownames(bbox) <- c("x","y")
+
+small_net <- dodgr_streetnet(bbox)
+temp <- small_net[, c("osm_id", "geometry")]
+
+# Visualise small network
+tm_shape(temp) + 
+  tm_layout(legend.outside = TRUE, bg = "black") +
+  tm_lines("osm_id", lwd = 1.5)
